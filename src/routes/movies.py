@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db, MovieModel
 from schemas.movies import MovieDetailResponseSchema, MovieListResponseSchema
 
-
 router = APIRouter()
 
 
@@ -15,8 +14,8 @@ async def get_movies(
     per_page: int = Query(10, ge=1, le=20),
     db: AsyncSession = Depends(get_db),
 ):
-    # общее количество фильмов
-    total_items = (await db.execute(select(func.count()).select_from(MovieModel))).scalar_one()
+    # Подсчёт общего количества фильмов
+    total_items = (await db.execute(select(func.count(MovieModel.id)))).scalar_one()
     if total_items == 0:
         raise HTTPException(status_code=404, detail="No movies found.")
 
@@ -29,9 +28,10 @@ async def get_movies(
     if not movies:
         raise HTTPException(status_code=404, detail="No movies found.")
 
-    base_url = "/theater/movies/"
-    prev_page = f"{base_url}?page={page - 1}&per_page={per_page}" if page > 1 else None
-    next_page = f"{base_url}?page={page + 1}&per_page={per_page}" if page < total_pages else None
+    # Формирование корректных ссылок на предыдущую и следующую страницу
+    base_url = "/api/v1/theater/movies/"
+    prev_page = None if page == 1 else f"{base_url}?page={page - 1}&per_page={per_page}"
+    next_page = f"{base_url}?page={min(total_pages, page + 1)}&per_page={per_page}"
 
     return MovieListResponseSchema(
         movies=movies,
