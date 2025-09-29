@@ -14,7 +14,6 @@ async def get_movies(
     per_page: int = Query(10, ge=1, le=20),
     db: AsyncSession = Depends(get_db),
 ):
-    # Подсчёт общего количества фильмов
     total_items = (await db.execute(select(func.count(MovieModel.id)))).scalar_one()
     if total_items == 0:
         raise HTTPException(status_code=404, detail="No movies found.")
@@ -28,10 +27,15 @@ async def get_movies(
     if not movies:
         raise HTTPException(status_code=404, detail="No movies found.")
 
-    # Формирование корректных ссылок на предыдущую и следующую страницу
-    base_url = "/api/v1/theater/movies/"
+    # base_url строго по примеру задачи
+    base_url = "/theater/movies/"
     prev_page = None if page == 1 else f"{base_url}?page={page - 1}&per_page={per_page}"
     next_page = f"{base_url}?page={min(total_pages, page + 1)}&per_page={per_page}"
+
+    # округляем budget и revenue до int
+    for movie in movies:
+        movie.budget = int(movie.budget)
+        movie.revenue = int(movie.revenue)
 
     return MovieListResponseSchema(
         movies=movies,
